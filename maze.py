@@ -152,8 +152,14 @@ for i in render_steps:
 
     # Animate the path drawing dynamically
     if mic_hit_frame != -1 and i >= mic_hit_frame:
-        idx = int((i - mic_hit_frame) * (len(path) / max(1, frames - mic_hit_frame)))
-        if idx > 0:
+        # Calculate progress from 0.0 to 1.0 based on available frames left
+        progress = (i - mic_hit_frame) / max(1, (frames - 1) - mic_hit_frame)
+        
+        # +1 guarantees it reaches the very last coordinate in the list
+        idx = int(progress * len(path)) + 1 
+        idx = min(idx, len(path)) # Cap it to prevent out-of-bounds
+        
+        if idx > 1:
             p_x = [p[2] for p in path[:idx]]
             p_y = [p[1] for p in path[:idx]]
             p_z = [p[0] * Z_SPACING + 1.0 for p in path[:idx]]
@@ -172,20 +178,21 @@ for i in render_steps:
     fig.savefig(buf, format='png', facecolor='#050505', bbox_inches='tight', pad_inches=0)
     buf.seek(0)
     pil_frames.append(Image.open(buf))
+    buf.close()
     print(f"Rendered frame {i}/{frames}", end="\r")
 
 gif_path = 'output/smooth_acoustic_multiplate.gif'
 
-# --- NEW: Duplicate the last frame to create a pause ---
-pause_duration_seconds = 2.0  # How long you want the final frame to stay on screen
+# --- Add End Pause ---
+pause_duration_seconds = 2.0  
 frame_duration_ms = 30
 extra_frames = int((pause_duration_seconds * 1000) / frame_duration_ms)
 
-# Append the final frame multiple times
-pil_frames.extend([pil_frames[-1]] * extra_frames)
-# -------------------------------------------------------
+# Append the final frame multiple times to hold the completed state
+if pil_frames:
+    pil_frames.extend([pil_frames[-1]] * extra_frames)
 
-# Save with a duration of 30ms per frame (~33 fps) for a buttery-smooth GIF
+# Save with a duration of 30ms per frame (~33 fps)
 pil_frames[0].save(gif_path, save_all=True, append_images=pil_frames[1:], duration=frame_duration_ms, loop=0)
 
-print(f"\nDone! Saved smooth animation to {gif_path} with a {pause_duration_seconds}s end pause.")
+print(f"\nDone! Saved smooth animation to {gif_path}")
