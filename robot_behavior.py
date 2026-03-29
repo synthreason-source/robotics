@@ -235,7 +235,7 @@ def simulate_3d_arm(behaviors, offsets, sim_index):
         return line,
 
     ani = animation.FuncAnimation(fig, update, frames=frames, interval=50, blit=False)
-    gif_path = f'arm_sim_{sim_index}.gif'
+    gif_path = f'output/arm_sim_{sim_index}.gif'
     ani.save(gif_path, writer='pillow')
     plt.close(fig)
     print(f"Saved sim to {gif_path}")
