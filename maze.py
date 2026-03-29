@@ -110,7 +110,7 @@ path = path[::-1]
 print("Rendering...")
 X, Y = np.meshgrid(np.arange(N), np.arange(N))
 
-# Fixed deprecation warning by using modern Matplotlib colormaps registry
+# Fix colormap warning using modern Matplotlib API
 colormap = mpl.colormaps['twilight_shifted']
 
 norm = Normalize(vmin=-1.0, vmax=1.0)
@@ -163,9 +163,8 @@ for i in render_steps:
     fig.savefig(buf, format='png', facecolor='#050505', bbox_inches='tight', pad_inches=0)
     buf.seek(0)
     
-    # Fix PIL lazy loading by forcing .load() before closing the buffer
-    img = Image.open(buf)
-    img.load()  
+    # FIX: Use .copy() to completely detach the image from the memory buffer
+    img = Image.open(buf).copy()
     pil_frames.append(img)
     buf.close()
     
@@ -180,6 +179,7 @@ extra_frames = int((pause_duration_seconds * 1000) / frame_duration_ms)
 if pil_frames:
     pil_frames.extend([pil_frames[-1]] * extra_frames)
 
+# Now it can safely save because all images are fully loaded and copied in memory
 pil_frames[0].save(gif_path, save_all=True, append_images=pil_frames[1:], duration=frame_duration_ms, loop=0)
 
 print(f"\nDone! Saved smooth animation to {gif_path}")
