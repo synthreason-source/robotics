@@ -7,7 +7,7 @@ import os
 # 1. SIMULATION PARAMETERS
 # ---------------------------------------------------------
 N = 120          # Grid resolution (120x120 plate)
-frames = 3000     # Total frames for animation
+frames = 600     # Total frames for animation
 c = 1.0          # Wave speed
 dt = 0.5         # Time step
 dx = 1.0         # Spatial step
