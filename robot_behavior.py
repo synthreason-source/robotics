@@ -300,7 +300,7 @@ def simulate_3d_arm_true_avoidance(behaviors, offsets, sim_index):
 num_simulations = 32
 for i in range(1, num_simulations + 1):
     print(f"\n{'='*40}\nSTARTING SIMULATION {i}\n{'='*40}")
-    inv = make_auto_inventory(n_items=17) #default behavior
+    inv = make_auto_inventory(n_items=13) #default behavior
     off = make_auto_inventory_offset(n_items=7) # adaptive space
     combined = inv | off
     
