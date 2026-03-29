@@ -297,7 +297,7 @@ def simulate_3d_arm_true_avoidance(behaviors, offsets, sim_index):
     print(f"Saved sim visual to {gif_path}")
 
 # Run 4 distinct simulations iteratively
-num_simulations = 4
+num_simulations = 32
 for i in range(1, num_simulations + 1):
     print(f"\n{'='*40}\nSTARTING SIMULATION {i}\n{'='*40}")
     inv = make_auto_inventory(n_items=5)
