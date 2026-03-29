@@ -176,7 +176,16 @@ for i in render_steps:
 
 gif_path = 'output/smooth_acoustic_multiplate.gif'
 
-# Save with a duration of 30ms per frame (~33 fps) for a buttery-smooth GIF
-pil_frames[0].save(gif_path, save_all=True, append_images=pil_frames[1:], duration=30, loop=0)
+# --- NEW: Duplicate the last frame to create a pause ---
+pause_duration_seconds = 2.0  # How long you want the final frame to stay on screen
+frame_duration_ms = 30
+extra_frames = int((pause_duration_seconds * 1000) / frame_duration_ms)
 
-print(f"\nDone! Saved smooth animation to {gif_path}")
+# Append the final frame multiple times
+pil_frames.extend([pil_frames[-1]] * extra_frames)
+# -------------------------------------------------------
+
+# Save with a duration of 30ms per frame (~33 fps) for a buttery-smooth GIF
+pil_frames[0].save(gif_path, save_all=True, append_images=pil_frames[1:], duration=frame_duration_ms, loop=0)
+
+print(f"\nDone! Saved smooth animation to {gif_path} with a {pause_duration_seconds}s end pause.")
