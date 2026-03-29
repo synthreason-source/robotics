@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
+import matplotlib as mpl
 import os
 import io
 from PIL import Image
@@ -14,7 +15,7 @@ print("Starting Smooth 3D Multi-Plate Acoustic Simulation...")
 # ---------------------------------------------------------
 L = 3            
 N = 30           
-frames = 800      # Long enough physics time for the wave to solve the maze
+frames = 800      
 C2 = 0.15        
 damping = 0.99   
 
@@ -27,18 +28,15 @@ arrival_time = np.full((L, N, N), np.inf)
 balls_mask = np.zeros((L, N, N), dtype=bool)
 
 # --- COMPLEX OBSTACLES ---
-# Plate 0: Double-slit style wall + corner block
 balls_mask[0, 14:16, :] = True
 balls_mask[0, 14:16, 6:10] = False  
 balls_mask[0, 14:16, 20:24] = False 
 balls_mask[0, 0:8, 22:30] = True    
 
-# Plate 1: Staggered cross-walls with a central hole
 balls_mask[1, 8:22, 14:16] = True
 balls_mask[1, 14:16, 8:22] = True
 balls_mask[1, 14:16, 14:16] = False 
 
-# Plate 2: C-shaped enclosure around the target
 balls_mask[2, 20:22, 15:30] = True
 balls_mask[2, 15:30, 20:22] = True
 balls_mask[2, 15:17, 22:28] = True
@@ -107,35 +105,28 @@ if mic_hit_frame != -1:
 path = path[::-1] 
 
 # ---------------------------------------------------------
-# 4. 3D MULTI-PLATE RENDERING (OPTIMIZED FOR SMOOTHNESS)
+# 4. 3D MULTI-PLATE RENDERING
 # ---------------------------------------------------------
 print("Rendering...")
 X, Y = np.meshgrid(np.arange(N), np.arange(N))
 
-try:
-    import matplotlib.cm as cm
-    colormap = cm.get_cmap('twilight_shifted')
-except:
-    import matplotlib as mpl
-    colormap = mpl.colormaps['twilight_shifted']
+# Fixed deprecation warning by using modern Matplotlib colormaps registry
+colormap = mpl.colormaps['twilight_shifted']
 
 norm = Normalize(vmin=-1.0, vmax=1.0)
 Z_SPACING = 15
 
 pil_frames = []
 
-# --- SMOOTHNESS PARAMETERS ---
-# 150 frames rendered to the GIF
 RENDER_FRAMES = 150
 render_steps = np.linspace(0, frames-1, RENDER_FRAMES).astype(int)
 
-# Create the figure ONCE outside the loop to prevent memory leaks
 fig = plt.figure(figsize=(6, 5))
 ax = fig.add_subplot(111, projection='3d')
 fig.patch.set_facecolor('#050505')
 
 for i in render_steps:
-    ax.clear() # Clear the axis instead of making a new figure
+    ax.clear()
     ax.set_facecolor('#050505')
     
     wave_state = wave_frames[i]
@@ -146,18 +137,13 @@ for i in render_steps:
         colors[:, :, 3] = 0.5  
         colors[balls_mask[z]] = [0.1, 0.1, 0.1, 0.9]
         
-        # rstride=2, cstride=2 lowers polygon counts, drastically speeding up rendering
         ax.plot_surface(X, Y, Z_grid, facecolors=colors, rstride=2, cstride=2, shade=False)
         ax.text(0, N, z * Z_SPACING + 2, f"Layer {z}", color='white', fontsize=6)
 
-    # Animate the path drawing dynamically
     if mic_hit_frame != -1 and i >= mic_hit_frame:
-        # Calculate progress from 0.0 to 1.0 based on available frames left
         progress = (i - mic_hit_frame) / max(1, (frames - 1) - mic_hit_frame)
-        
-        # +1 guarantees it reaches the very last coordinate in the list
         idx = int(progress * len(path)) + 1 
-        idx = min(idx, len(path)) # Cap it to prevent out-of-bounds
+        idx = min(idx, len(path)) 
         
         if idx > 1:
             p_x = [p[2] for p in path[:idx]]
@@ -170,29 +156,30 @@ for i in render_steps:
     
     ax.set_zlim(-5, (L-1)*Z_SPACING + 5)
     
-    # Smooth camera rotation
     ax.view_init(elev=15, azim=-60 + (i * 0.2)) 
     ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([]); ax.axis('off')
     
     buf = io.BytesIO()
     fig.savefig(buf, format='png', facecolor='#050505', bbox_inches='tight', pad_inches=0)
     buf.seek(0)
-    pil_frames.append(Image.open(buf))
+    
+    # Fix PIL lazy loading by forcing .load() before closing the buffer
+    img = Image.open(buf)
+    img.load()  
+    pil_frames.append(img)
     buf.close()
+    
     print(f"Rendered frame {i}/{frames}", end="\r")
 
 gif_path = 'output/smooth_acoustic_multiplate.gif'
 
-# --- Add End Pause ---
 pause_duration_seconds = 2.0  
 frame_duration_ms = 30
 extra_frames = int((pause_duration_seconds * 1000) / frame_duration_ms)
 
-# Append the final frame multiple times to hold the completed state
 if pil_frames:
     pil_frames.extend([pil_frames[-1]] * extra_frames)
 
-# Save with a duration of 30ms per frame (~33 fps)
 pil_frames[0].save(gif_path, save_all=True, append_images=pil_frames[1:], duration=frame_duration_ms, loop=0)
 
 print(f"\nDone! Saved smooth animation to {gif_path}")
